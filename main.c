@@ -26,9 +26,11 @@ typedef struct Bullet {
     bool active;
 } Bullet;
 
-int LoadHighScore(void) {
+// 💡 ডাইনামিক হাই-স্কোর লোডার (৩টি মোডের জন্য আলাদা ফাইল রিড)
+int LoadHighScore(Difficulty diff) {
     int highScore = 0;
-    FILE *file = fopen("highscore.txt", "r");
+    const char* filename = (diff == DIFF_HARD) ? "highscore_hard.txt" : ((diff == DIFF_MEDIUM) ? "highscore_medium.txt" : "highscore_easy.txt");
+    FILE *file = fopen(filename, "r");
     if (file != NULL) {
         fscanf(file, "%d", &highScore);
         fclose(file);
@@ -36,8 +38,10 @@ int LoadHighScore(void) {
     return highScore;
 }
 
-void SaveHighScore(int score) {
-    FILE *file = fopen("highscore.txt", "w");
+// 💡 ডাইনামিক হাই-স্কোর সেভার (৩টি মোডের জন্য আলাদা ফাইল রাইট)
+void SaveHighScore(int score, Difficulty diff) {
+    const char* filename = (diff == DIFF_HARD) ? "highscore_hard.txt" : ((diff == DIFF_MEDIUM) ? "highscore_medium.txt" : "highscore_easy.txt");
+    FILE *file = fopen(filename, "w");
     if (file != NULL) {
         fprintf(file, "%d", score);
         fclose(file);
@@ -47,7 +51,7 @@ void SaveHighScore(int score) {
 int main(void) {
     const int screenWidth = 800;
     const int screenHeight = 600;
-    InitWindow(screenWidth, screenHeight, "Pokemon Shooter - Ultimate Boss Edition");
+    InitWindow(screenWidth, screenHeight, "Pokemon Shooter - Multi-Score Edition");
 
     InitAudioDevice();
 
@@ -65,7 +69,7 @@ int main(void) {
     float playerSpeed = 5.5f;
     int playerScore = 0;
     int playerLives = 3;
-    int highScore = LoadHighScore();
+    int activeHighScore = 0;
 
     Rectangle enemy = { 375, 100, 60, 40 };
     float baseEnemySpeed = 3.0f;
@@ -107,7 +111,7 @@ int main(void) {
                 isBossActive = false;
                 bossHealth = BOSS_MAX_HEALTH;
                 bossAttackActive = false;
-                highScore = LoadHighScore();
+                activeHighScore = LoadHighScore(currentDiff); // 💡 নির্দিষ্ট মোডের হাই-স্কোর লোড
                 for (int i = 0; i < MAX_BULLETS; i++) bullets[i].active = false;
                 break;
 
@@ -154,7 +158,7 @@ int main(void) {
                             playerLives--;
                             PlaySound(explodeSound);
                             if (playerLives <= 0) {
-                                if (playerScore > highScore) SaveHighScore(playerScore);
+                                if (playerScore > activeHighScore) SaveHighScore(playerScore, currentDiff);
                                 currentState = STATE_GAME_OVER;
                             }
                         }
@@ -209,7 +213,7 @@ int main(void) {
                         enemy.x = GetRandomValue(50, screenWidth - 100);
                         PlaySound(explodeSound);
                         if (playerLives <= 0) {
-                            if (playerScore > highScore) SaveHighScore(playerScore);
+                            if (playerScore > activeHighScore) SaveHighScore(playerScore, currentDiff);
                             currentState = STATE_GAME_OVER;
                         }
                     }
@@ -217,7 +221,7 @@ int main(void) {
                     if (CheckCollisionRecs((Rectangle){ playerPosition.x, playerPosition.y, 50, 50 }, boss)) {
                         playerLives = 0;
                         PlaySound(explodeSound);
-                        if (playerScore > highScore) SaveHighScore(playerScore);
+                        if (playerScore > activeHighScore) SaveHighScore(playerScore, currentDiff);
                         currentState = STATE_GAME_OVER;
                     }
                 }
@@ -230,21 +234,23 @@ int main(void) {
             switch (currentState) {
                 case STATE_MENU:
                     DrawText("POKEMON SHOOTER: ULTIMATE BOSS", 90, 130, 32, GOLD);
-                    DrawText(TextFormat("LIFETIME HIGH SCORE: %04d", highScore), 240, 210, 22, RED);
-                    DrawText("Press [G] to Select Difficulty", 260, 290, 22, GREEN);
-                    DrawText("Press [H] to How to Play", 260, 340, 22, LIGHTGRAY);
-                    DrawText("Press [A] to About Us (Developer Profile)", 260, 390, 22, LIGHTGRAY);
-                    DrawText("Dedicated to the Light Queen", 285, 460, 18, MAGENTA);
-                    break;
-
-                case STATE_DIFFICULTY_SELECT:
-                    DrawText("SELECT DIFFICULTY LEVEL", 220, 150, 30, GOLD);
-                    DrawText("Press [1] for EASY   (5 Lives)", 200, 260, 20, GREEN);
-                    DrawText("Press [2] for MEDIUM (3 Lives)", 200, 320, 20, ORANGE);
-DrawText("Press [3] for HARD   (1 Life)", 200, 380, 20, RED);
+                    
+                    // 💡 মেইন স্ক্রিনে ৩টি মোডেরই লাইভ হাই-স্কোর প্রদর্শন
+                    DrawText(TextFormat("EASY HIGH: %04d", LoadHighScore(DIFF_EASY)), 80, 210, 18, GREEN);
+                    DrawText(TextFormat("MEDIUM HIGH: %04d", LoadHighScore(DIFF_MEDIUM)), 320, 210, 18, ORANGE);
+DrawText(TextFormat("HARD HIGH: %04d", LoadHighScore(DIFF_HARD)), 580, 210, 18, RED);
+DrawText("Press [G] to Select Difficulty", 260, 290, 22, WHITE);
+DrawText("Press [H] to How to Play", 260, 340, 22, LIGHTGRAY);
+DrawText("Press [A] to About Us (Developer Profile)", 260, 390, 22, LIGHTGRAY);
+DrawText("Dedicated to the Light Queen", 285, 460, 18, MAGENTA);
 break;
-
-                    case STATE_HOW_TO_PLAY:
+case STATE_DIFFICULTY_SELECT:
+DrawText("SELECT DIFFICULTY LEVEL", 220, 150, 30, GOLD);
+DrawText("Press for EASY   (5 Lives)", 200, 260, 20, GREEN);
+DrawText("Press for MEDIUM (3 Lives)", 200, 320, 20, ORANGE);
+DrawText("Press for HARD   (1 Life)", 200, 380, 20, RED);
+break;
+case STATE_HOW_TO_PLAY:
 DrawText("HOW TO PLAY", 320, 100, 30, GOLD);
 DrawText("- Arrow Keys to move. SPACEBAR to fire purple laser.", 120, 220, 20, WHITE);
 DrawText("- Score 100+ to summon the DREADED BOSS SHIP!", 120, 270, 20, GOLD);
@@ -261,7 +267,7 @@ break;
 case STATE_GAME_OVER:
 DrawText("GAME OVER", 310, 180, 40, RED);
 DrawText(TextFormat("YOUR FINAL SCORE: %04d", playerScore), 260, 260, 24, WHITE);
-if (playerScore >= highScore) DrawText("NEW HIGH SCORE RECORDED!", 240, 310, 20, GREEN);
+if (playerScore >= activeHighScore) DrawText("NEW HIGH SCORE RECORDED!", 240, 310, 20, GREEN);
 DrawText("Press [R] to Return to Main Menu", 230, 400, 20, GREEN);
 break;
 case STATE_GAMEPLAY:
