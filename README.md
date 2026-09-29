@@ -41,4 +41,5 @@ gcc main.c -o game.exe -lraylib -lopengl32 -lgdi32 -lwinmm
 - **Navigation:** Use `Arrow Keys` to manipulate the reactive spaceship matrix dynamically across all coordinate axes.
 - **Offensive Actions:** Smash the `Spacebar` to fire high-energy deep purple plasma laser lines.
 - **Tactical Directives:** Score **100+ points** to call forth the Dreaded Boss Fleet. Avoid collision matrices with structural items, or your vitals reset instantly!
-- **Tribute:** *Dedicated to the Light Queen.* 👑
+
+
