@@ -19,30 +19,34 @@ typedef struct Bullet {
 int main(void) {
     const int screenWidth = 800;
     const int screenHeight = 600;
-    InitWindow(screenWidth, screenHeight, "Raylib Game - Final Masterpiece");
+    InitWindow(screenWidth, screenHeight, "Raylib Game - Pokemon Texture Architecture");
 
     GameState currentState = STATE_MENU;
 
-    // গেমের ভ্যারিয়েবলসমূহ
+    // গেমের কোর ভ্যারিয়েবলসমূহ
     Vector2 playerPosition = { (float)screenWidth/2, (float)screenHeight/2 + 100 };
     float playerSpeed = 5.0f;
     int playerScore = 0;
     int playerLives = 3;
 
     Rectangle enemy = { 375, 100, 50, 50 };
-    float enemySpeed = 3.0f;
+    float enemySpeed = 3.5f;
 
     Bullet bullets[MAX_BULLETS] = { 0 };
+
+    // 💡 প্রো-ইঞ্জিনিয়ারিং টিপ: ইমেজ লোডিং আর্কিটেকচার
+    // তুই যখন তোর প্রজেক্ট ফোল্ডারে "player.png" এবং "enemy.png" রাখবি, 
+    // তখন এই নিচের কমেন্ট করা কোড দুটি আনকমেন্ট করে দিলেই ইমেজ স্ক্রিনে চলে আসবে।
+    // Texture2D playerTexture = LoadTexture("player.png");
+    // Texture2D enemyTexture = LoadTexture("enemy.png");
 
     SetTargetFPS(60);
 
     while (!WindowShouldClose()) {
         // --- আপডেট জোন (Update Logic) ---
-        
         switch (currentState) {
             case STATE_MENU:
                 if (IsKeyPressed(KEY_G)) {
-                    // গেম নতুন করে শুরু করার রিসেট লজিক
                     playerPosition = (Vector2){ (float)screenWidth/2, (float)screenHeight/2 + 100 };
                     playerScore = 0;
                     playerLives = 3;
@@ -64,7 +68,7 @@ int main(void) {
                 break;
 
             case STATE_GAME_OVER:
-                if (IsKeyPressed(KEY_R)) currentState = STATE_MENU; // R চাপলে মেনুতে ব্যাক
+                if (IsKeyPressed(KEY_R)) currentState = STATE_MENU;
                 break;
 
             case STATE_GAMEPLAY:
@@ -74,10 +78,10 @@ int main(void) {
                 if (IsKeyDown(KEY_DOWN))  playerPosition.y += playerSpeed;
                 if (IsKeyDown(KEY_UP))    playerPosition.y -= playerSpeed;
 
-                // শত্রু মুভমেন্ট (AI Engine)
+                // শত্রু এআই মুভমেন্ট (স্পিড একটু বাড়ানো হয়েছে চ্যালেঞ্জের জন্য)
                 enemy.x += enemySpeed;
                 if (enemy.x <= 0 || enemy.x + enemy.width >= screenWidth) {
-                    enemySpeed *= -1.05f; // প্রতি দেওয়ালে ধাক্কায় ৫% স্পিড বাড়বে (জটিলতা বাড়ানোর জন্য)
+                    enemySpeed *= -1.05f; 
                 }
 
                 // শুটিং লজিক
@@ -85,14 +89,14 @@ int main(void) {
                     for (int i = 0; i < MAX_BULLETS; i++) {
                         if (!bullets[i].active) {
                             bullets[i].position = (Vector2){ playerPosition.x + 25, playerPosition.y };
-                            bullets[i].speed = (Vector2){ 0, -8.0f };
+                            bullets[i].speed = (Vector2){ 0, -9.0f }; // বুলেটের গতি আরও ফাস্ট
                             bullets[i].active = true;
                             break;
                         }
                     }
                 }
 
-                // বুলেট আপডেট ও এনিমি কলিশন
+                // বুলেট বনাম শত্রু কলিশন
                 for (int i = 0; i < MAX_BULLETS; i++) {
                     if (bullets[i].active) {
                         bullets[i].position.y += bullets[i].speed.y;
@@ -101,13 +105,13 @@ int main(void) {
                             bullets[i].active = false;
                             playerScore += 10;
                             enemy.x = GetRandomValue(50, screenWidth - 100);
-                            enemy.y = GetRandomValue(50, 200); // নতুন জায়গায় স্পন
+                            enemy.y = GetRandomValue(50, 200); 
                         }
                         if (bullets[i].position.y < 0) bullets[i].active = false;
                     }
                 }
                 
-                // প্লেয়ার বনাম শত্রু ফিজিক্স ধাক্কা
+                // প্লেয়ার বনাম শত্রু ফিজিক্স
                 if (CheckCollisionRecs((Rectangle){ playerPosition.x, playerPosition.y, 50, 50 }, enemy)) {
                     playerLives--;
                     enemy.x = GetRandomValue(50, screenWidth - 100);
@@ -123,7 +127,7 @@ int main(void) {
 
             switch (currentState) {
                 case STATE_MENU:
-                    DrawText("POKEMON SHOOTER EXTRAORDINAIRE", 120, 150, 32, GOLD);
+                    DrawText("POKEMON SHOOTER: ADVANCED VISUALS", 100, 150, 32, GOLD);
                     DrawText("Press [G] to Start Game", 280, 280, 22, GREEN);
                     DrawText("Press [H] to How to Play", 280, 330, 22, LIGHTGRAY);
                     DrawText("Press [A] to About Us (Developer Profile)", 280, 380, 22, LIGHTGRAY);
@@ -155,22 +159,33 @@ int main(void) {
                     break;
 
                 case STATE_GAMEPLAY:
-                    // UI ইনফো
                     DrawText(TextFormat("SCORE: %04d", playerScore), 10, 10, 20, GREEN);
                     DrawText(TextFormat("LIVES: %d", playerLives), screenWidth - 120, 10, 20, RED);
                     
-                    // অবজেক্ট রেন্ডারিং
-                    DrawRectangle(playerPosition.x, playerPosition.y, 50, 50, BLUE);
+                    // 💡 ইমেজের বদলে কাস্টম স্পেসশিপ শেপ রেন্ডারিং (যদি ইমেজ পাথ ফাঁকা থাকে)
+                    // DrawTexture(playerTexture, playerPosition.x, playerPosition.y, WHITE); <- ইমেজ থাকলে এটা হবে
+                    DrawTriangle((Vector2){ playerPosition.x + 25, playerPosition.y },
+                                 (Vector2){ playerPosition.x, playerPosition.y + 50 },
+                                 (Vector2){ playerPosition.x + 50, playerPosition.y + 50 }, BLUE); // চারকোনার বদলে ত্রিভুজ স্পেসশিপ!
+
+                    // শত্রু ড্র করা (লাল মেটেরিয়াল বক্স)
                     DrawRectangleRec(enemy, RED);
                     
+                    // লেজার বুলেট রেন্ডারিং (বৃত্তের বদলে কাস্টম ক্যাপসুল লেজার লাইন)
                     for (int i = 0; i < MAX_BULLETS; i++) {
-                        if (bullets[i].active) DrawCircleV(bullets[i].position, 5, RED);
+                        if (bullets[i].active) {
+                            DrawLineV(bullets[i].position, (Vector2){ bullets[i].position.x, bullets[i].position.y - 15 }, RED);
+                        }
                     }
                     break;
             }
         EndDrawing();
     }
 
+    // মেমোরি আনলোড করা (ইন্ডাস্ট্রি স্ট্যান্ডার্ড ক্লীনআপ)
+    // UnloadTexture(playerTexture);
+    // UnloadTexture(enemyTexture);
+    
     CloseWindow();
     return 0;
 }
