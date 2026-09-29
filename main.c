@@ -2,12 +2,12 @@
 
 #define MAX_BULLETS 10
 
-// গেমের বিভিন্ন স্ক্রিন বা স্টেট ডিফাইন করা
 typedef enum GameState {
     STATE_MENU,
     STATE_GAMEPLAY,
     STATE_HOW_TO_PLAY,
-    STATE_ABOUT_US
+    STATE_ABOUT_US,
+    STATE_GAME_OVER
 } GameState;
 
 typedef struct Bullet {
@@ -19,14 +19,16 @@ typedef struct Bullet {
 int main(void) {
     const int screenWidth = 800;
     const int screenHeight = 600;
-    InitWindow(screenWidth, screenHeight, "Raylib Game - Day 4: Professional Menu");
+    InitWindow(screenWidth, screenHeight, "Raylib Game - Final Masterpiece");
 
     GameState currentState = STATE_MENU;
 
-    // প্লেয়ার ও শত্রু সেটিংস
+    // গেমের ভ্যারিয়েবলসমূহ
     Vector2 playerPosition = { (float)screenWidth/2, (float)screenHeight/2 + 100 };
     float playerSpeed = 5.0f;
     int playerScore = 0;
+    int playerLives = 3;
+
     Rectangle enemy = { 375, 100, 50, 50 };
     float enemySpeed = 3.0f;
 
@@ -39,18 +41,30 @@ int main(void) {
         
         switch (currentState) {
             case STATE_MENU:
-                // মেনুর কি-ইনপুট চেকিং
-                if (IsKeyPressed(KEY_G)) currentState = STATE_GAMEPLAY;
+                if (IsKeyPressed(KEY_G)) {
+                    // গেম নতুন করে শুরু করার রিসেট লজিক
+                    playerPosition = (Vector2){ (float)screenWidth/2, (float)screenHeight/2 + 100 };
+                    playerScore = 0;
+                    playerLives = 3;
+                    enemy.x = 375;
+                    enemy.y = 100;
+                    for (int i = 0; i < MAX_BULLETS; i++) bullets[i].active = false;
+                    currentState = STATE_GAMEPLAY;
+                }
                 if (IsKeyPressed(KEY_H)) currentState = STATE_HOW_TO_PLAY;
                 if (IsKeyPressed(KEY_A)) currentState = STATE_ABOUT_US;
                 break;
 
             case STATE_HOW_TO_PLAY:
-                if (IsKeyPressed(KEY_B)) currentState = STATE_MENU; // B চাপলে ব্যাক টু মেনু
+                if (IsKeyPressed(KEY_B)) currentState = STATE_MENU;
                 break;
 
             case STATE_ABOUT_US:
                 if (IsKeyPressed(KEY_B)) currentState = STATE_MENU;
+                break;
+
+            case STATE_GAME_OVER:
+                if (IsKeyPressed(KEY_R)) currentState = STATE_MENU; // R চাপলে মেনুতে ব্যাক
                 break;
 
             case STATE_GAMEPLAY:
@@ -60,9 +74,11 @@ int main(void) {
                 if (IsKeyDown(KEY_DOWN))  playerPosition.y += playerSpeed;
                 if (IsKeyDown(KEY_UP))    playerPosition.y -= playerSpeed;
 
-                // শত্রু মুভমেন্ট
+                // শত্রু মুভমেন্ট (AI Engine)
                 enemy.x += enemySpeed;
-                if (enemy.x <= 0 || enemy.x + enemy.width >= screenWidth) enemySpeed *= -1.0f;
+                if (enemy.x <= 0 || enemy.x + enemy.width >= screenWidth) {
+                    enemySpeed *= -1.05f; // প্রতি দেওয়ালে ধাক্কায় ৫% স্পিড বাড়বে (জটিলতা বাড়ানোর জন্য)
+                }
 
                 // শুটিং লজিক
                 if (IsKeyPressed(KEY_SPACE)) {
@@ -76,22 +92,27 @@ int main(void) {
                     }
                 }
 
-                // বুলেট আপডেট ও কলিশন
+                // বুলেট আপডেট ও এনিমি কলিশন
                 for (int i = 0; i < MAX_BULLETS; i++) {
                     if (bullets[i].active) {
                         bullets[i].position.y += bullets[i].speed.y;
+                        
                         if (CheckCollisionRecs((Rectangle){ bullets[i].position.x - 5, bullets[i].position.y - 5, 10, 10 }, enemy)) {
                             bullets[i].active = false;
                             playerScore += 10;
                             enemy.x = GetRandomValue(50, screenWidth - 100);
+                            enemy.y = GetRandomValue(50, 200); // নতুন জায়গায় স্পন
                         }
                         if (bullets[i].position.y < 0) bullets[i].active = false;
                     }
                 }
                 
-                // প্লেয়ার বনাম শত্রু কলিশন
+                // প্লেয়ার বনাম শত্রু ফিজিক্স ধাক্কা
                 if (CheckCollisionRecs((Rectangle){ playerPosition.x, playerPosition.y, 50, 50 }, enemy)) {
-                    playerScore = 0;
+                    playerLives--;
+                    enemy.x = GetRandomValue(50, screenWidth - 100);
+                    enemy.y = 100;
+                    if (playerLives <= 0) currentState = STATE_GAME_OVER;
                 }
                 break;
         }
@@ -114,30 +135,34 @@ int main(void) {
                     DrawText("- Use ARROW KEYS to move your blue ship.", 150, 220, 20, WHITE);
                     DrawText("- Press SPACEBAR to fire red plasma bullets.", 150, 270, 20, WHITE);
                     DrawText("- Hit the sliding RED ENEMY box to score points.", 150, 320, 20, WHITE);
-                    DrawText("- Avoid physical contact with the enemy, or your score resets!", 150, 370, 20, RED);
-                    
+                    DrawText("- Physical contact with the enemy costs 1 LIFE!", 150, 370, 20, RED);
                     DrawText("Press [B] to Go Back to Main Menu", 230, 480, 20, GREEN);
                     break;
 
                 case STATE_ABOUT_US:
                     DrawText("ABOUT THE DEVELOPER", 240, 80, 30, GOLD);
-                    
-                    // প্রফেশনাল ডেভেলপার প্রোফাইল শো-কেস (English Comments Inside Blocks)
                     DrawText("Lead Engineer: Tahmid Moontaka", 120, 180, 22, GREEN);
                     DrawText("Role: 2nd-Year Computer Science & Systems Trainee", 120, 220, 18, LIGHTGRAY);
                     DrawText("Core Tech: Python, C, C++, C#, Git & GitHub Ecosystem", 120, 260, 18, LIGHTGRAY);
                     DrawText("Specialization: Competitive Programming & AI/ML Systems", 120, 300, 18, LIGHTGRAY);
-                    
-                    DrawText("Vision: Designing scalable city-wide utility frameworks and", 120, 360, 18, WHITE);
-                    DrawText("high-performance production architectures.", 120, 390, 18, WHITE);
-                    
                     DrawText("Press [B] to Go Back to Main Menu", 230, 490, 20, GREEN);
                     break;
 
+                case STATE_GAME_OVER:
+                    DrawText("GAME OVER", 310, 180, 40, RED);
+                    DrawText(TextFormat("YOUR FINAL SCORE: %04d", playerScore), 260, 260, 24, WHITE);
+                    DrawText("Press [R] to Return to Main Menu", 230, 380, 20, GREEN);
+                    break;
+
                 case STATE_GAMEPLAY:
+                    // UI ইনফো
                     DrawText(TextFormat("SCORE: %04d", playerScore), 10, 10, 20, GREEN);
+                    DrawText(TextFormat("LIVES: %d", playerLives), screenWidth - 120, 10, 20, RED);
+                    
+                    // অবজেক্ট রেন্ডারিং
                     DrawRectangle(playerPosition.x, playerPosition.y, 50, 50, BLUE);
                     DrawRectangleRec(enemy, RED);
+                    
                     for (int i = 0; i < MAX_BULLETS; i++) {
                         if (bullets[i].active) DrawCircleV(bullets[i].position, 5, RED);
                     }
@@ -149,4 +174,5 @@ int main(void) {
     CloseWindow();
     return 0;
 }
+
 
