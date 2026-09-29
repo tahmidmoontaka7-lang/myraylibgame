@@ -26,9 +26,18 @@ typedef struct Bullet {
 int main(void) {
     const int screenWidth = 800;
     const int screenHeight = 600;
-    InitWindow(screenWidth, screenHeight, "Raylib Game - Ultimate Edition");
+    InitWindow(screenWidth, screenHeight, "Raylib Game - Cyberpunk Edition");
 
+    // ১. অ디오 ইঞ্জিন চালু করা
     InitAudioDevice();
+
+    // 💡 ব্যাকগ্রাউন্ড মিউজিক এবং সাউন্ড ইফেক্টস লোড করা
+    Music bgm = LoadMusicStream("Cyberpunk Moonlight Sonata.mp3");
+    bgm.looping = true;
+    PlayMusicStream(bgm);
+
+    Sound shootSound = LoadSound("shoot.wav");
+    Sound explodeSound = LoadSound("explosion.wav");
 
     GameState currentState = STATE_MENU;
     Difficulty currentDiff = DIFF_EASY;
@@ -47,6 +56,9 @@ int main(void) {
     SetTargetFPS(60);
 
     while (!WindowShouldClose()) {
+        // 💡 প্রতি ফ্রেমে ব্যাকগ্রাউন্ড মিউজিক বাফার আপডেট করা (স্মুথ প্লেব্যাকের জন্য)
+        UpdateMusicStream(bgm);
+
         // --- আপডেট জোন (Update Logic) ---
         switch (currentState) {
             case STATE_MENU:
@@ -64,13 +76,13 @@ int main(void) {
                 }
                 if (IsKeyPressed(KEY_TWO)) {
                     currentDiff = DIFF_MEDIUM;
-                    baseEnemySpeed = 5.0f;
+                    baseEnemySpeed = 5.5f;
                     playerLives = 3;
                     currentState = STATE_GAMEPLAY;
                 }
                 if (IsKeyPressed(KEY_THREE)) {
                     currentDiff = DIFF_HARD;
-                    baseEnemySpeed = 8.0f;
+                    baseEnemySpeed = 9.0f;
                     playerLives = 1;
                     currentState = STATE_GAMEPLAY;
                 }
@@ -110,8 +122,11 @@ int main(void) {
                     for (int i = 0; i < MAX_BULLETS; i++) {
                         if (!bullets[i].active) {
                             bullets[i].position = (Vector2){ playerPosition.x + 25, playerPosition.y };
-                            bullets[i].speed = (Vector2){ 0, -9.0f };
+                            bullets[i].speed = (Vector2){ 0, -9.5f };
                             bullets[i].active = true;
+                            
+                            // 💡 লেজার শুট সাউন্ড প্লে করা
+                            PlaySound(shootSound);
                             break;
                         }
                     }
@@ -126,6 +141,9 @@ int main(void) {
                             playerScore += (currentDiff == DIFF_HARD) ? 30 : (currentDiff == DIFF_MEDIUM ? 20 : 10);
                             enemy.x = GetRandomValue(50, screenWidth - 100);
                             enemy.y = GetRandomValue(50, 200); 
+                            
+                            // 💡 শত্রু ধ্বংস হওয়ার ব্লাস্ট সাউন্ড প্লে করা
+                            PlaySound(explodeSound);
                         }
                         if (bullets[i].position.y < 0) bullets[i].active = false;
                     }
@@ -135,6 +153,10 @@ int main(void) {
                     playerLives--;
                     enemy.x = GetRandomValue(50, screenWidth - 100);
                     enemy.y = 100;
+                    
+                    // 💡 প্লেয়ার আঘাত পেলে সতর্কতামূলক সাউন্ড ইফেক্ট হিসেবে এক্সপ্লোশন ট্রিগার
+                    PlaySound(explodeSound);
+                    
                     if (playerLives <= 0) currentState = STATE_GAME_OVER;
                 }
                 break;
@@ -146,7 +168,7 @@ int main(void) {
 
             switch (currentState) {
                 case STATE_MENU:
-                    DrawText("POKEMON SHOOTER: MASTERPIECE", 120, 150, 32, GOLD);
+                    DrawText("POKEMON SHOOTER: AUDIO MASTER", 100, 150, 32, GOLD);
                     DrawText("Press [G] to Select Difficulty", 260, 280, 22, GREEN);
                     DrawText("Press [H] to How to Play", 260, 330, 22, LIGHTGRAY);
                     DrawText("Press [A] to About Us (Developer Profile)", 260, 380, 22, LIGHTGRAY);
@@ -163,7 +185,7 @@ int main(void) {
                 case STATE_HOW_TO_PLAY:
                     DrawText("HOW TO PLAY", 320, 100, 30, GOLD);
                     DrawText("- Use ARROW KEYS to move your blue ship.", 150, 220, 20, WHITE);
-                    DrawText("- Press SPACEBAR to fire red plasma bullets.", 150, 270, 20, WHITE);
+                    DrawText("- Press SPACEBAR to fire plasma laser bullets.", 150, 270, 20, WHITE);
                     DrawText("- Harder difficulty yields up to 3x higher score!", 150, 320, 20, GOLD);
                     DrawText("Press [B] to Go Back to Main Menu", 230, 480, 20, GREEN);
                     break;
@@ -204,11 +226,12 @@ int main(void) {
         EndDrawing();
     }
 
+    // 💡 মেমোরি আনলোড ও ক্লিনআপ
+    UnloadSound(shootSound);
+    UnloadSound(explodeSound);
+    UnloadMusicStream(bgm);
+    
     CloseAudioDevice(); 
     CloseWindow();
     return 0;
 }
-
-
-
-
